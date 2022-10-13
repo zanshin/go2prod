@@ -1,10 +1,22 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"net"
 	"net/http"
 )
+
+// Create random port toi listen on
+func createListener() (l net.Listener, close func()) {
+    l, err := net.Listen("tcp", ":0")
+    if err != nil {
+        panic(err)
+    }
+
+    return l, func() {
+        _ = l.Close()
+    }
+}
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -20,17 +32,20 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(""))
+
 }
 
 func main() {
+	l, close := createListener()
+    defer close()
 
 	http.HandleFunc("/health", healthHandler)
 
 	//start the server
-	fmt.Println("Starting server on port 8080")
-
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	log.Println("listening at", l.Addr().(*net.TCPAddr).Port)
+	if err := http.Serve(l, nil); err != nil {
 		log.Fatal(err)
 	}
 
